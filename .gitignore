@@ -1,0 +1,5 @@
+__pycache__/
+my-work/*
+!my-work/README.md
+*.zip
+check.md
