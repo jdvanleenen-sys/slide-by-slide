@@ -20,9 +20,9 @@ HTML = """<html><head><style>.slide{color:red}</style></head><body>
 </body></html>"""
 
 
-def entry(n, title, question, project="none", decided="nothing yet"):
+def entry(n, title, question, project="none", decided="nothing yet", answer="a"):
     return (f"## Slide {n}: {title}\n- **Point:** p\n- **For my project:** {project}\n"
-            f"- **Question:** {question}\n- **My answer:** a\n- **Decided:** {decided}\n"
+            f"- **Question:** {question}\n- **My answer:** {answer}\n- **Decided:** {decided}\n"
             f"- **Follow-up:** none\n\n")
 
 

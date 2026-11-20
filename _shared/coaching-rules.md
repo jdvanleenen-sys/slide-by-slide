@@ -13,7 +13,8 @@ home of the rules; every step file points here.
    The number check fails a written question that breaks this.
 3. **Never invent their results, customers, prices or numbers.** If you need a number they have not
    given you, ask for it. Every number you write down must be one they said or one you worked out in
-   front of them from numbers they said, with the math shown.
+   front of them from numbers they said, with the math shown. Write the math in numbers only, so the
+   check can work it out: `6 x 60 = 360`, `360 + 20 = 380`. Math that does not add up fails the check.
 4. **Label what you say.** Keep three things apart: what they told you (fact), what you are assuming
    (assumption), and what you think (opinion). Say which is which.
 5. **Push back when an answer does not hold up, and say why.** Then let them decide. The plan changes

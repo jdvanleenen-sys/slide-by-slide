@@ -114,5 +114,20 @@ class InlineNotesTests(Base):
         self.assertNotIn("Ask for a name", deck.show(self.root, 1))
 
 
+class MathTests(Base):
+    def test_wrong_math_fails(self):
+        problems = self.walk(entry(1, "A", "What does it cost?", project="3 x 4000 = 99000 a month.",
+                                   decided="Charge 99000.", answer="3 jobs, 4000 each."))
+        self.assertIn("slide 1: math does not add up: 3 x 4000 = 99000", problems)
+        self.assertIn("slide 1: Decided has 99000, which the learner never gave", problems)
+
+    def test_chained_math_passes(self):
+        self.assertEqual(self.walk(entry(1, "A", "What is your floor?", project="6 x 60 = 360, 360 + 20 = 380.",
+                                         decided="Floor is 380.", answer="6 hours at 60, tools 20.")), [])
+
+    def test_comma_math_passes(self):
+        self.assertEqual(self.walk(entry(1, "A", "What does it cost?", project="3 x 4000 = 12,000 a month.", answer="3 jobs, 4000 each.")), [])
+
+
 if __name__ == "__main__":
     unittest.main()

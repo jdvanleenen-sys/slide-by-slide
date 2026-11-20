@@ -6,7 +6,7 @@
 Prints `pass`, or `fail` followed by one line per problem, and exits 1 on a fail. A slide entry fails
 when its "My answer" is empty, or when a number in its "Decided" or "For my project" line is not one
 the learner gave: in any "My answer", in my-work/me.md, in a file in my-project/, or as the result of
-math shown in the same entry ("... = 2,190"). A number on the slide itself (its title or its text in
+math shown in the same entry that adds up ("3 x 730 = 2,190"). Math that does not add up fails. A number on the slide itself (its title or its text in
 deck/) also counts as given. It also fails a "Question" line that asks more than one thing (more than
 one question mark, or "..., and is it..."), asks for a yes or no ("Do you...", or behind a lead-in:
 "If ..., would they...?"; an either/or with "or" is fine), or repeats one of the three questions
@@ -14,6 +14,7 @@ before it. Once my-work/summary.md exists it is checked too: every number in it 
 the walkthrough, me.md or my-project/, and its "Slides done" line must match the walkthrough.
 Standard library only. Run from the workspace root.
 """
+import ast
 import importlib.util
 import re
 import sys
@@ -30,6 +31,8 @@ PROJECT_TEXT = {".md", ".txt", ".csv"}
 YES_NO = {"am", "is", "are", "was", "were", "do", "does", "did", "can", "could", "will", "would",
           "should", "shall", "have", "has", "had", "may", "might", "must"}
 ASK_WORDS = {"how", "what", "which", "who", "whom", "whose", "when", "where", "why"} | YES_NO
+_NUM = r"\$?\d[\d,]*(?:\.\d+)?"
+EQUATION = re.compile(rf"({_NUM}(?:\s*[x×*+\-/]\s*{_NUM})+)\s*=\s*\$?(\d[\d,]*(?:\.\d+)?)")
 DONE_LINE = re.compile(r"- \*\*Slides done:\*\*\s*(\d+)\s*of\s*(\d+)\s*\(skipped:\s*(\d+)\)")
 
 
@@ -110,13 +113,41 @@ def question_problems(entry_list):
     return found
 
 
+def arithmetic(expr):
+    """Work out 'a x b + c' with numbers and + - x * / only; None if it is anything else."""
+    text = expr.replace("$", "").replace(",", "").replace("×", "*").replace("x", "*")
+    try:
+        tree = ast.parse(text, mode="eval")
+    except SyntaxError:
+        return None
+    if not all(isinstance(n, (ast.Expression, ast.BinOp, ast.Constant, ast.Add, ast.Sub, ast.Mult, ast.Div))
+               for n in ast.walk(tree)):
+        return None
+    try:
+        return eval(compile(tree, "<math>", "eval"))  # only numbers and + - * / reach this line
+    except ZeroDivisionError:
+        return None
+
+
+def shown_math(entry):
+    """Return (results of math that adds up, problems for math that does not)."""
+    shown, found = set(), []
+    for m in EQUATION.finditer(entry):
+        value, said = arithmetic(m.group(1)), float(m.group(2).replace(",", ""))
+        if value is not None and abs(value - said) <= max(0.01, 0.005 * abs(value)):
+            shown.add(norm(m.group(2)))
+        else:
+            found.append(f"math does not add up: {' '.join(m.group(0).split())}")
+    return shown, found
+
+
 def problems_in(n, entry, given):
     if re.search(r"- \*\*Skipped\*\*", entry):
         return []
     if not field(entry, "My answer"):
         return [f"slide {n}: no answer written"]
-    shown = {norm(m) for m in re.findall(r"=\s*\$?(\d[\d,]*(?:\.\d+)?)", entry)}
-    found = []
+    shown, found = shown_math(entry)
+    found = [f"slide {n}: {f}" for f in found]
     for name in CHECKED_FIELDS:
         for num in sorted(numbers_in(field(entry, name)) - given - shown):
             found.append(f"slide {n}: {name} has {num}, which the learner never gave")

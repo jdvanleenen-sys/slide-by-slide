@@ -17,7 +17,15 @@ reading where they are from `my-work/`.
 
 ## The one check that is a script
 
-`python _tools/check_walkthrough.py` reads `my-work/walkthrough.md` and `my-work/me.md`. It fails when a
-slide entry has no answer, or when a number in "Decided" or "For my project" appears nowhere in the
-learner's own answers or in `me.md`. That is the "never invent a number" rule, checked by code.
-`python -m unittest discover -s tests` proves it catches a planted invented number.
+`python _tools/check_walkthrough.py` reads `my-work/` and fails when:
+
+- a slide entry has no answer;
+- a number in "Decided" or "For my project" is not one the learner gave. Given means: in their
+  answers, in `me.md`, in a file in `my-project/`, on the slide itself (title or text), or the result of
+  math in the same entry that adds up (`6 x 60 = 360`). Math that does not add up fails;
+- a "Question" line asks two things, asks for a yes or no, or repeats one of the last three;
+- once `summary.md` exists: a number in it is not in the walkthrough, `me.md` or `my-project/`, or its
+  "Slides done" line does not match.
+
+That is the "never invent a number" rule, checked by code. `python -m unittest discover -s tests`
+proves it catches planted mistakes.
