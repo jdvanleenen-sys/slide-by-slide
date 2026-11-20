@@ -14,7 +14,7 @@ import sys
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
-SLIDE_HEAD = re.compile(r"^## Slide (\d+):?\s*(.*)$", re.M)
+SLIDE_HEAD = re.compile(r"^## Slide (\d+):?[ \t]*(.*)$", re.M)
 PDF_PAGE = re.compile(rb"/Type\s*/Page(?![s\w])")
 ZOOM = 1.5
 EMPTY = "deck: empty. Copy the slides into the deck/ folder (a PDF, or slides.md)."
@@ -103,11 +103,24 @@ def status(root):
             f"skipped: {len(skipped)} | next: {nxt}")
 
 
+def split_notes(body):
+    """Split a slides.md body into (slide text, inline notes from its 'Notes:' lines)."""
+    keep, notes = [], []
+    for line in body.splitlines():
+        (notes if line.startswith("Notes:") else keep).append(line.removeprefix("Notes:").strip()
+                                                              if line.startswith("Notes:") else line)
+    return "\n".join(keep).strip(), "\n".join(notes).strip()
+
+
 def notes_for(root, n):
+    """Speaker notes for slide n: deck/notes.md first, else the slide's own 'Notes:' lines."""
     path = root / "deck" / "notes.md"
-    if not path.exists():
-        return ""
-    return md_slides(path).get(n, ("", ""))[1]
+    if path.exists():
+        return md_slides(path).get(n, ("", ""))[1]
+    deck = find_deck(root)
+    if deck is not None and deck.suffix.lower() == ".md":
+        return split_notes(md_slides(deck).get(n, ("", ""))[1])[1]
+    return ""
 
 
 def open_file(path):
@@ -146,7 +159,7 @@ def show(root, n, opener=None):
         if n not in slides:
             return f"There is no slide {n}; the deck has {len(slides)}."
         title, body = slides[n]
-        out = f"Slide {n}: {title}\n{body}"
+        out = f"Slide {n}: {title}\n{split_notes(body)[0]}"
     else:
         out, picture = show_pdf(root, deck, n)
     if opener and picture:

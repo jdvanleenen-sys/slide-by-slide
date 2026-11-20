@@ -12,13 +12,16 @@ The one home for how a slide runs. `02_slides/CONTEXT.md` points here.
 2. **Say what is being taught,** in two or three plain sentences. Use the speaker notes if the deck has
    them. Do not add points the slide does not make.
 3. **Say what it means for their project,** using their real customer and their real numbers from
-   `my-work/me.md` and `my-project/`. If the slide does not fit their project, say so plainly,
-   suggest skipping it, and let the learner decide. Only they say "skip".
+   `my-work/me.md` and `my-project/`. If the slide does not fit their project, say so plainly, suggest
+   skipping it, and let the learner decide: make that choice the slide's one question: "Which do you want: skip this one, or work it through for your
+   project?" Then wait. Only they say "skip"; if they choose to work it through, go on to step 4.
 4. **Ask one question about their real work.** Before you ask, read the **Question** lines of the
    last three entries in `my-work/walkthrough.md`, and do not ask the same thing again. Follow coaching rule 2
    for the shape of the question. Then stop and wait.
 5. **Write it down.** Once they answer, add the slide's entry to `my-work/walkthrough.md` in the shape
    `_templates/walkthrough.md` shows: their answer in their words, what was decided, any follow-up.
+   If they gave a number for the first time, add it as they said it to the **Numbers I have given**
+   line of `my-work/me.md`.
    Then run `python _tools/check_walkthrough.py`. If it prints `fail`, fix the entry (usually a number
    they never said) before you go on.
 6. **Wait for "next".** Only "next" moves to slide N+1. A pushback round on the same slide is fine.

@@ -99,5 +99,20 @@ class CleanImportTests(Base):
         self.assertIn("3 / 4 of it", notes)
 
 
+class InlineNotesTests(Base):
+    def test_inline_notes_show_as_speaker_notes(self):
+        from test_tools import deck
+        out = deck.show(self.root, 1)
+        body, _, notes = out.partition("speaker notes:")
+        self.assertNotIn("Notes:", body)
+        self.assertIn("Ask for a name, not a category.", notes)
+
+    def test_notes_file_wins_over_inline_notes(self):
+        from test_tools import deck
+        (self.root / "deck" / "notes.md").write_text("## Slide 1\nFrom the notes file.\n", encoding="utf-8")
+        self.assertIn("From the notes file.", deck.show(self.root, 1))
+        self.assertNotIn("Ask for a name", deck.show(self.root, 1))
+
+
 if __name__ == "__main__":
     unittest.main()

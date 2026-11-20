@@ -51,7 +51,7 @@ class DeckTests(Workspace):
     def test_show_md_slide_has_text_and_notes(self):
         out = deck.show(self.root, 1)
         self.assertTrue(out.startswith("Slide 1: Who has the problem?"))
-        self.assertIn("Notes:", out)
+        self.assertIn("speaker notes:", out)
 
     def test_show_missing_slide_says_so(self):
         self.assertIn("There is no slide 9", deck.show(self.root, 9))
