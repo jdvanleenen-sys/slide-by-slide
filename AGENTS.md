@@ -14,7 +14,7 @@ Read `_shared/coaching-rules.md` before your first reply. Those rules win over a
 | `01_setup/` `02_slides/` `03_wrap-up/` | the three steps, each with its own `CONTEXT.md` |
 | `_shared/` | the coaching rules and the steps every slide follows |
 | `_templates/` | blank copies of the `my-work/` files |
-| `_tools/` | `deck.py` (counts and shows slides), `check_walkthrough.py` (the number check), `links.py` (builder's link check) |
+| `_tools/` | `deck.py` (counts and shows slides), `check_walkthrough.py` (the number and question check), `import_html.py` (turns an HTML deck into `slides.md`), `links.py` (builder's link check) |
 
 ## Where to go
 

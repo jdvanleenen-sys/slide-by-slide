@@ -19,6 +19,6 @@ One question at a time. It never makes up a number: a script checks every number
 against what you said (`python _tools/check_walkthrough.py`). It changes nothing outside `my-work/`.
 
 ## Test it
-`python -m unittest discover -s tests` (12 tests, including a planted made-up number the check must catch).
+`python -m unittest discover -s tests` (24 tests, including a planted made-up number the check must catch).
 
 Built by Jeff Van Leenen (AI the vL Way), from Ari Leavesley's coaching brief.

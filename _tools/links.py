@@ -80,8 +80,8 @@ def looks_like_path(s):
     return "/" in s or bool(re.search(r"\.\w{1,5}$", s))
 
 
-def main():
-    args, skip, graph_out = sys.argv[1:], set(SKIP), None
+def parse_args(argv):
+    args, skip, graph_out = argv[1:], set(SKIP), None
     while "--skip" in args:
         i = args.index("--skip")
         skip.add(args[i + 1])
@@ -91,31 +91,45 @@ def main():
         graph_out = Path(args[i + 1]).resolve()
         del args[i:i + 2]
     root = Path(args[0]).resolve() if args else Path(__file__).resolve().parent.parent
+    return root, skip, graph_out
 
-    files = sorted(f for f in root.rglob("*.md")
-                   if not any(p.startswith(".") or p in skip for p in f.relative_to(root).parts[:-1]))
-    broken, nodes, edges, checked = [], [], [], 0
 
-    def link(f, rel, target):
-        nonlocal checked
+class Scan:
+    """Walks the .md files once, collecting broken links, graph nodes and edges."""
+
+    def __init__(self, root):
+        self.root, self.broken, self.nodes, self.edges, self.checked = root, [], [], [], 0
+
+    def link(self, f, rel, target):
         if re.match(r"^[a-z]+:", target) or target.startswith("#") or "{" in target:
             return  # web link, anchor, or a template's {placeholder}
-        checked += 1
+        self.checked += 1
         path = (f.parent / urllib.parse.unquote(target.split("#")[0])).resolve()
         if not path.exists():
-            broken.append(f"{rel}: {target}")
+            self.broken.append(f"{rel}: {target}")
         elif path.suffix == ".md" and path != f.resolve():
             try:
-                edges.append((rel, Path(os.path.relpath(path, root)).as_posix()))
+                self.edges.append((rel, Path(os.path.relpath(path, self.root)).as_posix()))
             except ValueError:  # another drive
                 pass
 
-    for f in files:
-        rel = f.relative_to(root).as_posix()
+    def inputs_line(self, f, rel, line):
+        strict = "reference" in line.lower()  # every-run inputs must already exist
+        for m in TICK.finditer(line):
+            p = m.group(1)
+            if not looks_like_path(p):
+                continue
+            self.checked += 1
+            hits = [(f.parent / p).resolve(), (self.root / p).resolve()]
+            if not any(h.exists() or (not strict and h.parent.is_dir()) for h in hits):
+                self.broken.append(f"{rel}: input `{p}`")
+
+    def file(self, f):
+        rel = f.relative_to(self.root).as_posix()
         front, body = front_matter(f.read_text(encoding="utf-8-sig", errors="replace"))
         for m in LINK_KEYS.finditer(front):
             for target in re.findall(r"[^\s\[\],\"']+\.md\b", m.group(1)):
-                link(f, rel, target)
+                self.link(f, rel, target)
         title = field(front, "title")
         in_inputs = False
         for line in lines_outside_fences(body):
@@ -126,38 +140,41 @@ def main():
                 continue
             imp = IMPORT.match(line.strip())
             if imp and not re.match(r"^(~|/|[A-Za-z]:)", imp.group(1)):  # home or absolute paths aren't the tree's
-                link(f, rel, imp.group(1))
+                self.link(f, rel, imp.group(1))
             for m in LINK.finditer(line):
-                link(f, rel, m.group(1)[1:-1] if m.group(1).startswith("<") else m.group(1))
+                self.link(f, rel, m.group(1)[1:-1] if m.group(1).startswith("<") else m.group(1))
             if in_inputs and re.match(r"\s*[-*]\s", line):
-                strict = "reference" in line.lower()  # every-run inputs must already exist
-                for m in TICK.finditer(line):
-                    p = m.group(1)
-                    if not looks_like_path(p):
-                        continue
-                    checked += 1
-                    hits = [(f.parent / p).resolve(), (root / p).resolve()]
-                    if not any(h.exists() or (not strict and h.parent.is_dir()) for h in hits):
-                        broken.append(f"{rel}: input `{p}`")
-        nodes.append({"node": rel, "type": field(front, "type"), "title": title or f.stem,
-                      "description": field(front, "description"), "tags": field(front, "tags")})
+                self.inputs_line(f, rel, line)
+        self.nodes.append({"node": rel, "type": field(front, "type"), "title": title or f.stem,
+                           "description": field(front, "description"), "tags": field(front, "tags")})
 
+
+def write_graph(scan, graph_out):
+    try:
+        where = Path(os.path.relpath(scan.root, graph_out.parent)).as_posix()
+    except ValueError:  # another drive
+        where = scan.root.as_posix()
+    with graph_out.open("w", encoding="utf-8", newline="\n") as out:
+        out.write(json.dumps({"root": where}) + "\n")
+        for n in scan.nodes:
+            out.write(json.dumps(n, ensure_ascii=False) + "\n")
+        for a, b in dict.fromkeys(scan.edges):
+            out.write(json.dumps({"edge": [a, b]}, ensure_ascii=False) + "\n")
+
+
+def main():
+    root, skip, graph_out = parse_args(sys.argv)
+    files = sorted(f for f in root.rglob("*.md")
+                   if not any(p.startswith(".") or p in skip for p in f.relative_to(root).parts[:-1]))
+    scan = Scan(root)
+    for f in files:
+        scan.file(f)
     if graph_out:
-        try:
-            where = Path(os.path.relpath(root, graph_out.parent)).as_posix()
-        except ValueError:  # another drive
-            where = root.as_posix()
-        with graph_out.open("w", encoding="utf-8", newline="\n") as out:
-            out.write(json.dumps({"root": where}) + "\n")
-            for n in nodes:
-                out.write(json.dumps(n, ensure_ascii=False) + "\n")
-            for a, b in dict.fromkeys(edges):
-                out.write(json.dumps({"edge": [a, b]}, ensure_ascii=False) + "\n")
-
-    for b in broken:
+        write_graph(scan, graph_out)
+    for b in scan.broken:
         print(b)
-    print(f"{len(files)} files, {checked} links and inputs checked, {len(broken)} broken")
-    sys.exit(1 if broken else 0)
+    print(f"{len(files)} files, {scan.checked} links and inputs checked, {len(scan.broken)} broken")
+    sys.exit(1 if scan.broken else 0)
 
 
 if __name__ == "__main__":

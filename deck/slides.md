@@ -1,7 +1,7 @@
 # Sample deck: know your number
 
 A three-slide sample so the workspace runs on first open. Replace this file with your course deck
-(a PDF, or a `slides.md` in this same shape) through **Inputs**.
+(a PDF, or a `slides.md` in this same shape) by copying it into this `deck/` folder.
 
 ## Slide 1: Who has the problem?
 Pick the person before the product. Name one real person or business who has the problem today.

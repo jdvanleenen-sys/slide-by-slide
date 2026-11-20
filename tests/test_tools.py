@@ -56,9 +56,9 @@ class DeckTests(Workspace):
     def test_show_missing_slide_says_so(self):
         self.assertIn("There is no slide 9", deck.show(self.root, 9))
 
-    def test_empty_deck_asks_for_inputs(self):
+    def test_empty_deck_asks_for_the_slides(self):
         (self.root / "deck" / "slides.md").unlink()
-        self.assertIn("Add the slides through Inputs", deck.status(self.root))
+        self.assertIn("Copy the slides into the deck/ folder", deck.status(self.root))
 
     def test_pdf_deck_wins_and_renders_a_picture(self):
         try:

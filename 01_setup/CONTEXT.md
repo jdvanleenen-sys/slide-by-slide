@@ -8,16 +8,18 @@ One job: write `my-work/me.md` so every slide can be tied to their real work.
 
 ## Process
 1. Greet them in one line: you will go through the deck one slide at a time, using their own project.
-2. Ask these four questions **one at a time**, waiting for each answer:
-   1. What are you building or working on? (one or two sentences)
-   2. Who is it for: the real person or business you want to help?
-   3. What is your next deadline, if you have one?
-   4. Anything in `my-project/` I should read first? (If it is empty, ask them to add files through
-      **Inputs**, or carry on without.)
+2. Ask these five questions **one at a time**, waiting for each answer:
+   1. What are you building, working on or teaching? (one or two sentences)
+   2. Who is it for: the real person, business or audience you want to help?
+   3. What should they be able to do after this that they cannot do now?
+   4. What is your next deadline, if you have one?
+   5. Anything in `my-project/` I should read first? (If it is empty, they can copy files into the
+      `my-project/` folder, or carry on without.)
 3. Copy `_templates/me.md`, `_templates/walkthrough.md` and `_templates/later.md` into `my-work/`.
    Fill `me.md` with their answers, in their words. Write "not given" for anything they skipped.
-4. Run `python _tools/deck.py status`. If it says the deck is empty, tell them to add the slides
-   through **Inputs** (files under `deck/`) and stop here.
+4. Run `python _tools/deck.py status`. If it says the deck is empty, or names an HTML deck to import,
+   tell them what it says (copy the deck into the `deck/` folder, or run the import line it prints) and
+   stop here.
 5. Show them `me.md` in a few lines and ask: "Is that right?"
 
 ## Outputs
