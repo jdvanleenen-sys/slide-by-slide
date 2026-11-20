@@ -8,8 +8,11 @@ when its "My answer" is empty, or when a number in its "Decided" or "For my proj
 the learner gave: in any "My answer", in my-work/me.md, in a file in my-project/, or as the result of
 math shown in the same entry ("... = 2,190"). A number on the slide itself (its title or its text in
 deck/) also counts as given. It also fails a "Question" line that asks more than one thing (more than
-one question mark), asks for a yes or no ("Do you...", "Is it..."), or repeats one of the three
-questions before it. Standard library only. Run from the workspace root.
+one question mark, or "..., and is it..."), asks for a yes or no ("Do you...", or behind a lead-in:
+"If ..., would they...?"; an either/or with "or" is fine), or repeats one of the three questions
+before it. Once my-work/summary.md exists it is checked too: every number in it must already be in
+the walkthrough, me.md or my-project/, and its "Slides done" line must match the walkthrough.
+Standard library only. Run from the workspace root.
 """
 import importlib.util
 import re
@@ -26,6 +29,8 @@ CHECKED_FIELDS = ("Decided", "For my project")
 PROJECT_TEXT = {".md", ".txt", ".csv"}
 YES_NO = {"am", "is", "are", "was", "were", "do", "does", "did", "can", "could", "will", "would",
           "should", "shall", "have", "has", "had", "may", "might", "must"}
+ASK_WORDS = {"how", "what", "which", "who", "whom", "whose", "when", "where", "why"} | YES_NO
+DONE_LINE = re.compile(r"- \*\*Slides done:\*\*\s*(\d+)\s*of\s*(\d+)\s*\(skipped:\s*(\d+)\)")
 
 
 def norm(num):
@@ -75,6 +80,20 @@ def question_key(q):
     return " ".join(re.findall(r"[a-z0-9']+", q.lower()))
 
 
+def shape_problem(q):
+    """Return what is wrong with the shape of one question, or ""."""
+    words = question_key(q).split()
+    joined = any(w == "and" and nxt in ASK_WORDS for w, nxt in zip(words, words[1:]))
+    if q.count("?") > 1 or joined:
+        return "Question asks more than one thing"
+    clauses = re.sub(r"'[^']*'|\"[^\"]*\"", "", q).split(",")
+    starts = [question_key(c).split()[:1] for c in clauses]
+    lead_in = any(s and s[0] in YES_NO for s in starts[1:]) and " or " not in f" {question_key(q)} "
+    if (words and words[0] in YES_NO) or lead_in:
+        return "Question is a yes or no question; ask how or what"
+    return ""
+
+
 def question_problems(entry_list):
     """Fail a Question that asks two things, asks for a yes or no, or repeats one of the last three."""
     found, asked = [], []
@@ -83,10 +102,8 @@ def question_problems(entry_list):
         if not q:
             continue
         words = question_key(q).split()
-        if q.count("?") > 1:
-            found.append(f"slide {n}: Question asks more than one thing")
-        if words and words[0] in YES_NO:
-            found.append(f"slide {n}: Question is a yes or no question; ask how or what")
+        if shape_problem(q):
+            found.append(f"slide {n}: {shape_problem(q)}")
         if words and question_key(q) in asked[-3:]:
             found.append(f"slide {n}: Question repeats one of the last three")
         asked.append(question_key(q))
@@ -106,16 +123,39 @@ def problems_in(n, entry, given):
     return found
 
 
+def summary_problems(root, walk_text, given):
+    """Summary: no number the walkthrough, me.md or my-project/ lacks; the slide count must match."""
+    path = root / "my-work" / "summary.md"
+    if not path.exists():
+        return []
+    text = path.read_text(encoding="utf-8")
+    done, skipped = deck.walked(root)
+    found_deck = deck.find_deck(root)
+    total = deck.slide_count(found_deck) if found_deck else 0
+    m = DONE_LINE.search(text)
+    if not m:
+        return ["summary: fill the Slides done line as 'X of Y (skipped: Z)'"]
+    found = []
+    if tuple(int(g) for g in m.groups()) != (len(done), total, len(skipped)):
+        found.append(f"summary: Slides done should say {len(done)} of {total} (skipped: {len(skipped)})")
+    allowed = given | numbers_in(walk_text) | {str(i) for i in range(total + 1)}
+    for num in sorted(numbers_in(text) - allowed):
+        found.append(f"summary: {num} is not in the walkthrough or anything the learner gave")
+    return found
+
+
 def check(root):
     path = root / "my-work" / "walkthrough.md"
     if not path.exists():
         return ["no my-work/walkthrough.md yet: run setup first"]
-    entry_list = list(entries(path.read_text(encoding="utf-8")))
+    walk_text = path.read_text(encoding="utf-8")
+    entry_list = list(entries(walk_text))
     given = given_numbers(root, entry_list)
     problems = []
     for n, entry in entry_list:
         problems += problems_in(n, entry, given | slide_numbers(root, n, entry))
-    return problems + question_problems(entry_list)
+    body = walk_text.split("\n---\n", 1)[-1]
+    return problems + question_problems(entry_list) + summary_problems(root, body, given)
 
 
 def main():

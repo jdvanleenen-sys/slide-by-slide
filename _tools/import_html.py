@@ -4,14 +4,19 @@
     python _tools/import_html.py deck/your-deck.html [--force]
 
 Reads one slide per <section class="slide ...">. The title is the section's data-title, else its first
-heading. Speaker notes come from an <aside hidden> inside the section. Writes next to the HTML file and
-will not replace an existing slides.md or notes.md unless --force is given. Standard library only.
+heading. Speaker notes come from an <aside hidden> inside the section. Labels drawn inside a diagram
+(<svg> text) are kept. Screen furniture is dropped: the top bars, the mode strip, the progress bar, key
+hints, and the "13 / 15" page counter. Writes next to the HTML file and will not replace an existing
+slides.md or notes.md unless --force is given. Standard library only.
 """
+import re
 import sys
 from html.parser import HTMLParser
 from pathlib import Path
 
-SKIP_TAGS = {"script", "style", "svg", "template"}
+SKIP_TAGS = {"script", "style", "template"}
+CHROME = {"bar-left", "bar-right", "mode", "prog", "hint", "tools"}
+PAGE_COUNTER = re.compile(r"^\d+\s*/\s*\d+$")
 HEADINGS = {"h1", "h2", "h3"}
 VOID = {"br", "img", "hr", "input", "meta", "link", "source", "wbr", "area", "col", "embed", "track"}
 
@@ -33,7 +38,7 @@ class SlideParser(HTMLParser):
             role = "slide"
         elif self.cur is not None and tag == "aside" and "hidden" in a:
             role = "notes"
-        elif tag in SKIP_TAGS:
+        elif tag in SKIP_TAGS or CHROME & set((a.get("class") or "").split()):
             role = "skip"
         elif tag in HEADINGS:
             role = "head"
@@ -55,6 +60,8 @@ class SlideParser(HTMLParser):
         if "skip" in roles:
             return
         words = " ".join(data.split())
+        if PAGE_COUNTER.match(words) and "notes" not in roles:
+            return
         self.cur["notes" if "notes" in roles else "text"].append(words)
         if "head" in roles and "notes" not in roles:
             self.cur["head"].append(words)
